@@ -1,2 +1,2 @@
 # usgan
-Ultrasound Image Genrator
+Ultrasound Image Generator
