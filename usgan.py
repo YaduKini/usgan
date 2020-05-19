@@ -1,3 +1,5 @@
+""""""
+
 from __future__ import print_function
 import argparse
 import os
@@ -214,7 +216,9 @@ for epoch in range(num_epochs):
         # Format batch
         real_cpu = data[0].to(device)
         b_size = real_cpu.size(0)
+        print("b size: {}".format(len(b_size)))
         label = torch.full((b_size,), real_label, device=device)
+        print("length of label: {}".format(len(label)))
         # Forward pass real batch through D
         output = netD(real_cpu).view(-1)
         # Calculate loss on all-real batch
