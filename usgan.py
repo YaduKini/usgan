@@ -13,13 +13,15 @@ import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
 import numpy as np
+import matplotlib
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from IPython.display import HTML
 from torch.autograd import Variable
 from torchvision.datasets import ImageFolder
 import argparse
-
+#from torchvision.utils import save_image
 
 # Root directory for dataset
 #data = "/home/yadu/BMC/PMSD_praktikum/PMSD/"
@@ -44,7 +46,7 @@ print(opt)
 workers = 2
 
 # Batch size during training
-batch_size = 1
+batch_size = 5
 
 # Spatial size of training images. All images will be resized to this
 #   size using a transformer.
@@ -63,7 +65,7 @@ ngf = 64
 ndf = 64
 
 # Number of training epochs
-num_epochs = 1
+num_epochs = 5
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -73,16 +75,6 @@ beta1 = 0.5
 
 # Number of GPUs available. Use 0 for CPU mode.
 ngpu = 1
-
-
-
-
-
-
-
-
-
-
 
 # transform = transforms.Compose([transforms.Lambda(lambda image: image.convert('RGB')),
 #                                 transforms.RandomResizedCrop(224),
@@ -94,7 +86,10 @@ transform=transforms.Compose([transforms.Resize(image_size),
                               transforms.CenterCrop(image_size),
                               transforms.ToTensor(),
                               transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
 #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+#transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
+
 
 # create the dataset
 dataset = dset.ImageFolder(root=data,
@@ -109,7 +104,7 @@ dataloader = torch.utils.data.DataLoader(dataset=dataset,
 device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
 
 
-# Plot some training images
+#Plot some training images
 # real_batch = next(iter(dataloader))
 # print("type of real batch: {}".format(type(real_batch)))
 # plt.figure(figsize=(8,8))
@@ -178,6 +173,7 @@ netG.apply(weights_init)
 # Print the model
 print(netG)
 
+# create the discriminator
 class Discriminator(nn.Module):
     def __init__(self, ngpu):
         super(Discriminator, self).__init__()
@@ -221,8 +217,9 @@ netD.apply(weights_init)
 print(netD)
 
 # Initialize BCELoss function
-criterion = nn.BCELoss()
-#criterion = nn.BCEWithLogitsLoss()
+#criterion = nn.BCELoss()
+#criterion = nn.MSELoss()
+criterion = nn.BCEWithLogitsLoss()
 
 # Create batch of latent vectors that we will use to visualize
 #  the progression of the generator
@@ -244,6 +241,10 @@ G_losses = []
 D_losses = []
 iters = 0
 
+
+#writer = SummaryWriter()
+
+
 print("Starting Training Loop...")
 # For each epoch
 for epoch in range(num_epochs):
@@ -257,23 +258,23 @@ for epoch in range(num_epochs):
         # reset gradients for each iteration
         #optimizerD.zero_grad()
         test_size = data[0].to(device)
-        print("size of data: {}".format(test_size.size()))
+        #print("size of data: {}".format(test_size.size()))
         netD.zero_grad()
         # Format batch
         real_data = data[0].to(device)
         # batch size
         b_size = real_data.size(0)
-        print("b size: {}".format(b_size))
+        #print("b size: {}".format(b_size))
         label = torch.full((b_size,), real_label, device=device)
-        print("size of label: {}".format(label.size()))
-        print("type of label: {}".format(type(label)))
+        #print("size of label: {}".format(label.size()))
+        #print("type of label: {}".format(type(label)))
         # Forward pass real batch through D
         #real_data = real_data.view(-1)
         # convert the content in netD to a tensor. it is currently an int
         output = netD(real_data).view(-1)
         #output = netD(real_data).view(-1)
-        print("type of output - all real: {}".format(type(output)))
-        print("size of output: {}".format(output.size()))
+        #print("type of output - all real: {}".format(type(output)))
+        #print("size of output: {}".format(output.size()))
         # Calculate loss on all-real batch
         errD_real = criterion(output, label)
         # Calculate gradients for D in backward pass
@@ -289,7 +290,7 @@ for epoch in range(num_epochs):
         label.fill_(fake_label)
         # Classify all fake batch with D
         output = netD(fake_data.detach()).view(-1)
-        print("size of output - all fake: {}".format(output.size(0)))
+        #print("size of output - all fake: {}".format(output.size(0)))
 
         # Calculate D's loss on the all-fake batch
         errD_fake = criterion(output, label)
@@ -310,7 +311,7 @@ for epoch in range(num_epochs):
         label.fill_(real_label)  # fake labels are real for generator cost
         # Since we just updated D, perform another forward pass of all-fake batch through D
         output = netD(fake_data).view(-1)
-        print("size of output - final: {}".format(output.size(0)))
+        #print("size of output - final: {}".format(output.size(0)))
 
         # Calculate G's loss based on this output
         errG = criterion(output, label)
@@ -330,10 +331,37 @@ for epoch in range(num_epochs):
         G_losses.append(errG.item())
         D_losses.append(errD.item())
 
+        #print("type of D loss var: {}".format(type(D_losses)))
+
         # Check how the generator is doing by saving G's output on fixed_noise
         if (iters % 500 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
             with torch.no_grad():
                 fake = netG(fixed_noise).detach().cpu()
             img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
+            #save_image(img_list[0], 'img1.png')
+            # print("type of image list content: {}".format(img_list[0].size()))
+            plt.figure(figsize=(8, 8))
+            plt.axis("off")
+            plt.title("Generated Images")
+            plt.imshow(np.transpose(vutils.make_grid(img_list[0].to(device)[:64], padding=2, normalize=True).cpu(),(1, 2, 0)))
+
+
 
         iters += 1
+
+#print("shape of G loss var: {}".format(G_losses))
+epoch_count = range(1, len(G_losses)+1)
+G_losses = np.array(G_losses)
+D_losses = np.array(D_losses)
+
+plt.plot(epoch_count, G_losses, 'G', label='generator loss')
+plt.plot(epoch_count, D_losses, 'D', label='discriminator loss')
+plt.title('loss graph')
+plt.xlabel('epochs')
+plt.ylabel('loss')
+plt.legend()
+plt.show()
+
+
+
+
