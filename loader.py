@@ -1,6 +1,7 @@
 import torch
 import torchvision.transforms as transforms
 import torchvision.datasets as dset
+from torch.utils.data import DataLoader
 
 # Directory containing the data.
 directory = '/home/yadu/BMC/PMSD_praktikum/PMSD/generatorinput'
@@ -17,14 +18,13 @@ def get_ultrasound_data(params):
         transforms.Resize(params['imsize']),
         transforms.CenterCrop(params['imsize']),
         transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5),
-            (0.5, 0.5, 0.5))])
+        transforms.Normalize([0.5], [0.5])])
 
     # Create the dataset.
     dataset = dset.ImageFolder(root=root, transform=transform)
 
     # Create the dataloader.
-    dataloader = torch.utils.data.DataLoader(dataset,
+    dataloader = DataLoader(dataset,
         batch_size=params['bsize'],
         shuffle=True)
 
@@ -40,8 +40,7 @@ def get_generator_input(params):
         transforms.Resize(params['imsize']),
         transforms.CenterCrop(params['imsize']),
         transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5),
-                             (0.5, 0.5, 0.5))])
+        transforms.Normalize([0.5], [0.5])])
 
     # Create the dataset.
     dataset = dset.ImageFolder(root=directory, transform=transform)
